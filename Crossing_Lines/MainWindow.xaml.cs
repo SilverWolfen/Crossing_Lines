@@ -20,9 +20,11 @@ namespace Crossing_Lines
     {
         private Line[] markedZone = null;
         private Point firstPoint = new Point(-1, -1);
+        private ILinesAndPointsCalculations calculation;
 
         public MainWindow()
         {
+            calculation = new LinesAndPointsCalculations();
             InitializeComponent();
         }
 
@@ -167,7 +169,14 @@ namespace Crossing_Lines
             if (markedZone != null)
             {
                 CreateZone();
-                CheckLinesAndPoints();
+                foreach (Shape shape in MainCanvas.Children)
+                {
+                    Line line = shape as Line;
+                    if (line != null && line.Tag != "Edge")
+                    {
+                        calculation.CheckLinesAndPoints(line, markedZone);
+                    }
+                }
                 ResetZone(); 
                 firstPoint = new Point(-1, -1);
             }
@@ -180,10 +189,10 @@ namespace Crossing_Lines
             checkZone.Name = "CheckZone";
             checkZone.HorizontalAlignment = HorizontalAlignment.Left;
             checkZone.VerticalAlignment = VerticalAlignment.Center;
-            checkZone.Height = TakeY(2) - TakeY(1);
-            checkZone.Width = TakeX(2) - TakeX(1);
-            Canvas.SetTop(checkZone, TakeY(1));
-            Canvas.SetLeft(checkZone, TakeX(1));
+            checkZone.Height = calculation.TakeY(2, markedZone) - calculation.TakeY(1, markedZone);
+            checkZone.Width = calculation.TakeX(2, markedZone) - calculation.TakeX(1, markedZone);
+            Canvas.SetTop(checkZone, calculation.TakeY(1, markedZone));
+            Canvas.SetLeft(checkZone, calculation.TakeX(1, markedZone));
             MainCanvas.Children.Add(checkZone);
         }
 
@@ -217,130 +226,6 @@ namespace Crossing_Lines
                     line.Stroke = Brushes.LightSteelBlue;
                 }
             }
-        }
-
-        private double TakeX(int incom)
-        {
-            double result = 0;
-            if (markedZone != null)
-            {
-                List<double> allX = new List<double>();
-                foreach (var line in markedZone)
-                {
-                    allX.Add(line.X1);
-                    allX.Add(line.X2);
-                }
-                switch (incom)
-                {
-                    case 1:
-                        result = allX.Min();
-                        break;
-                    case 2:
-                        result = allX.Max();
-                        break;
-                    default:
-                        result = 0;
-                        break;
-                }
-            }
-            return result;
-        }
-
-        private double TakeY(int incom)
-        {
-            double result = 0;
-            if (markedZone != null)
-            {
-                List<double> allY = new List<double>();
-                foreach (var line in markedZone)
-                {
-                    allY.Add(line.Y1);
-                    allY.Add(line.Y2);
-                }
-                switch (incom)
-                {
-                    case 1:
-                        result = allY.Min();
-                        break;
-                    case 2:
-                        result = allY.Max();
-                        break;
-                    default:
-                        result = 0;
-                        break;
-                }
-            }
-            return result;
-        }
-
-        private void CheckLinesAndPoints()
-        {
-            foreach (Shape shape in MainCanvas.Children)
-            {
-                Line line = shape as Line;
-                if (line != null && line.Tag != "Edge")
-                {
-                    Point start = new Point(line.X1, line.Y1);
-                    Point end = new Point(line.X2, line.Y2);
-
-                    bool isStartInZone = IsPointInZone(markedZone, start);
-                    bool isEndInZone = IsPointInZone(markedZone, end);
-                    bool isCrossing = IsLineCrossing(markedZone, line);
-                    
-                    if (isStartInZone || isEndInZone)
-                    {
-                        line.Stroke = Brushes.Red;
-                    }
-                    if (isCrossing)
-                    {
-                        line.Stroke = Brushes.Red;
-                    }
-                }
-            }
-        }
-
-        public bool IsLineCrossing(Line[] edges, Line line)
-        {
-            foreach (Line edge in edges)
-            {
-                double denom = ((edge.X2 - edge.X1) * (line.Y2 - line.Y1)) - ((edge.Y2 - edge.Y1) * (line.X2 - line.X1));
-
-                if (denom == 0)
-                {
-                    continue;
-                }
-
-                double numer = ((edge.Y1 - line.Y1) * (line.X2 - line.X1)) - ((edge.X1 - line.X1) * (line.Y2 - line.Y1));
-
-                double r = numer / denom;
-
-                double numer2 = ((edge.Y1 - line.Y1) * (edge.X2 - edge.X1)) - ((edge.X1 - line.X1) * (edge.Y2 - edge.Y1));
-
-                double s = numer2 / denom;
-
-                if ((r < 0 || r > 1) || (s < 0 || s > 1))
-                {
-                    continue;
-                }
-                return true;
-            }
-
-            return false;
-        }
-
-        private bool IsPointInZone(Line[] lines, Point point)
-        {
-            bool isInZone = true;
-            foreach (Line line in lines)
-            {
-                double startPoint = (line.X2 - line.X1) * (point.Y - line.Y1) -
-                                    (point.X - line.X1) * (line.Y2 - line.Y1);
-                if (startPoint < 0)
-                {
-                    isInZone = false;
-                }
-            }
-            return isInZone;
         }
     }
 }
